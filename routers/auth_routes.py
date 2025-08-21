@@ -2,11 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from models.models import Usuario
 from dependencies import pegar_sessao
 from main import bcrypt_context
-from schemas import UsuarioSchema
+from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
+def criar_token(id_usuario):
+    token = f"fsafsd414fs{id_usuario}"
+    return token
+     
 @auth_router.get("/auth")
 async def auth():
     return {"mensagem": "Você acessou a rota de auth",
@@ -24,3 +28,12 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(
          session.add(novo_usuario)
          session.commit()
          return {"mensagem": f"Usuário cadastrado com sucesso {usuario_schema.email}"}
+    
+@auth_router.post('/login')
+async def login(login_schema: LoginSchema, session: Session = Depends(pegar_sessao)):
+    usuario = session.query(Usuario).filter(Usuario.email==login_schema.email).first()
+
+    if not usuario:
+         raise HTTPException(status_code=400, detail="Usuario não encontrado")
+    else:
+         
