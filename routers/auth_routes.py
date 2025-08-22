@@ -10,6 +10,15 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 def criar_token(id_usuario):
     token = f"fsafsd414fs{id_usuario}"
     return token
+
+def autenticar_usuario(email, senha, session):
+    usuario = session.query(Usuario).filter(Usuario.email==email).first()
+    if not usuario:
+         return False
+    elif not bcrypt_context.verify(senha, usuario.senha):
+         return False
+
+    return usuario
      
 @auth_router.get("/auth")
 async def auth():
@@ -18,7 +27,7 @@ async def auth():
 
 @auth_router.post("/criar_conta")
 async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(pegar_sessao)):
-    usuario = session.query(Usuario).filter(Usuario.email==usuario_schema.email).first()
+    usuario = autenticar_usuario(usuario_schema.email, usuario_schema.senha, session)
 
     if usuario:
           return HTTPException(status_code=400, detail="E-mail do usuário já cadastrado")
@@ -31,9 +40,11 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(
     
 @auth_router.post('/login')
 async def login(login_schema: LoginSchema, session: Session = Depends(pegar_sessao)):
-    usuario = session.query(Usuario).filter(Usuario.email==login_schema.email).first()
+    usuario = autenticar_usuario(login_schema.email, login_schema.senha, session)
 
     if not usuario:
-         raise HTTPException(status_code=400, detail="Usuario não encontrado")
+         raise HTTPException(status_code=400, detail="Usuario não encontrado ou credenciais inválidas")
     else:
-         
+         access_token = criar_token(usuario.id)
+         return {"access_token": access_token,
+                 "token_type": "Bearer"}
